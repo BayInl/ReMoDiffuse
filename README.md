@@ -95,19 +95,29 @@ conda activate mogen
 export PATH=/mnt/lustre/share/gcc/gcc-8.5.0/bin:$PATH
 export LD_LIBRARY_PATH=/mnt/lustre/share/gcc/gcc-8.5.0/lib:/mnt/lustre/share/gcc/gcc-8.5.0/lib64:/mnt/lustre/share/gcc/gmp-4.3.2/lib:/mnt/lustre/share/gcc/mpc-0.8.1/lib:/mnt/lustre/share/gcc/mpfr-2.4.2/lib:$LD_LIBRARY_PATH
 
+# Install Mamba
+conda install mamba -n base -c conda-forge
+
+# Install scikit-learn
+mamba install scikit-learn -y
+
 # Install Pytorch
-conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch -y
+mamba install pytorch=1.12.1 torchvision=0.13.1 torchaudio=0.12.1 cudatoolkit=11.3 diffusers -c pytorch -c conda-forge -y
 
 # Install MMCV
+# source /etc/network_turbo
 pip install "mmcv-full>=1.4.2,<=1.9.0" -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.12.1/index.html
+# unset http_proxy && unset https_proxy
 
 # Install Pytorch3d
-conda install -c bottler nvidiacub -y
-conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
-conda install pytorch3d -c pytorch3d -y
+mamba install -c bottler nvidiacub -y
+mamba install -c fvcore -c iopath -c conda-forge fvcore iopath -y
+mamba install pytorch3d -c pytorch3d -y
 
 # Install other requirements
+# source /etc/network_turbo
 pip install -r requirements.txt
+# unset http_proxy && unset https_proxy
 ```
 
 ## Data Preparation

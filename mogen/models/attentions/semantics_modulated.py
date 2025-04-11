@@ -58,7 +58,7 @@ class SemanticsModulatedAttention(nn.Module):
         query = self.query(self.norm(x))
         # B, N, D
         text_cond_type = (cond_type % 10 > 0).float()
-        retr_cond_type = (cond_type // 10 > 0).float()
+        retr_cond_type = (torch.div(cond_type, 10, rounding_mode='trunc') > 0).float()
         re_text = re_text.repeat(1, 1, re_motion.shape[2], 1)
         re_feat_key = torch.cat((re_motion, re_text), dim=-1).reshape(B, -1, 2 * D)
         key = torch.cat((

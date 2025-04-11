@@ -52,6 +52,8 @@ def build_dataloader(dataset: Dataset,
                      round_up: Optional[bool] = True,
                      seed: Optional[Union[int, None]] = None,
                      persistent_workers: Optional[bool] = True,
+                     prefetch_factor: Optional[int] = 2,
+                     pin_memory: Optional[bool] = True,
                      **kwargs):
     """Build PyTorch DataLoader.
     In distributed training, each GPU/process has a dataloader.
@@ -95,10 +97,11 @@ def build_dataloader(dataset: Dataset,
         sampler=sampler,
         num_workers=num_workers,
         collate_fn=partial(collate, samples_per_gpu=samples_per_gpu),
-        pin_memory=False,
+        pin_memory=pin_memory or False,
         shuffle=shuffle,
         worker_init_fn=init_fn,
         persistent_workers=persistent_workers,
+        prefetch_factor=prefetch_factor,
         **kwargs)
 
     return data_loader

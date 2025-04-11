@@ -59,6 +59,9 @@ def train_model(model,
             num_gpus=len(cfg.gpu_ids),
             dist=distributed,
             round_up=True,
+            pin_memory=cfg.data.pin_memory,
+            prefetch_factor=cfg.data.prefetch_factor,
+            persistent_workers=cfg.data.persistent_workers,
             seed=cfg.seed) for ds in dataset
     ]
 

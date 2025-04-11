@@ -1,7 +1,12 @@
 _base_ = ['../_base_/datasets/kit_ml_bs128.py']
 
 # checkpoint saving
-checkpoint_config = dict(interval=1)
+checkpoint_config = dict(
+    interval=1,          # 每1个epoch保存一次
+    by_epoch=True,       # 按epoch保存
+    save_optimizer=True,  # 保存优化器状态
+    max_keep_ckpts=3     # 只保留最新的3个checkpoint
+)
 
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
@@ -10,11 +15,12 @@ resume_from = None
 workflow = [('train', 1)]
 
 # optimizer
-optimizer = dict(type='Adam', lr=2e-4)
+optimizer = dict(type='Adam', lr=3e-4)
+
 optimizer_config = dict(grad_clip=None)
 # learning policy
 lr_config = dict(policy='CosineAnnealing', min_lr_ratio=2e-5, by_epoch=False)
-runner = dict(type='EpochBasedRunner', max_epochs=20)
+runner = dict(type='EpochBasedRunner', max_epochs=30)
 
 log_config = dict(
     interval=50,
@@ -31,7 +37,7 @@ text_latent_dim = 256
 ff_size = 1024
 num_heads = 8
 dropout = 0
-    
+
 # model settings
 model = dict(
     type='MotionDiffusion',
@@ -110,6 +116,7 @@ model = dict(
         model_mean_type='start_x',
         model_var_type='fixed_large',
         respace='15,15,8,6,6',
+        inference_steps=50,
     ),
     inference_type='ddim'
 )
