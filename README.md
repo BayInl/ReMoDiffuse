@@ -117,6 +117,7 @@ mamba install pytorch3d -c pytorch3d -y
 # Install other requirements
 # source /etc/network_turbo
 pip install -r requirements.txt
+pip install 'numpy<2'
 # unset http_proxy && unset https_proxy
 ```
 

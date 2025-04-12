@@ -129,7 +129,9 @@ class DiffusionTransformer(BaseModule, metaclass=ABCMeta):
         self.time_embed = nn.Sequential(
             nn.Linear(self.latent_dim, self.time_embed_dim),
             nn.SiLU(),
-            nn.Linear(self.time_embed_dim, self.time_embed_dim),
+            nn.Linear(self.time_embed_dim, self.time_embed_dim // 4),
+            nn.SiLU(),
+            nn.Linear(self.time_embed_dim // 4, self.time_embed_dim),
         )
         self.build_temporal_blocks(sa_block_cfg, ca_block_cfg, ffn_cfg)
         
