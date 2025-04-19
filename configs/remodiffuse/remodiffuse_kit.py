@@ -15,7 +15,7 @@ resume_from = None
 workflow = [('train', 1)]
 
 # optimizer
-optimizer = dict(type='Adam', lr=3e-4)
+optimizer = dict(type='Adam', lr=2e-4)
 
 optimizer_config = dict(grad_clip=None)
 # learning policy
@@ -59,6 +59,20 @@ model = dict(
         ffn_cfg=dict(
             latent_dim=latent_dim,
             ffn_dim=ff_size,
+            dropout=dropout,
+            time_embed_dim=time_embed_dim
+        ),
+        sa_block_cfg=dict(
+            type='EfficientSelfAttention',
+            latent_dim=latent_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            time_embed_dim=time_embed_dim
+        ),
+        sparse_sa_cfg=dict(
+            type='SparseSelfAttention',
+            latent_dim=latent_dim,
+            num_heads=num_heads,
             dropout=dropout,
             time_embed_dim=time_embed_dim
         ),

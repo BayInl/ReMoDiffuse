@@ -42,7 +42,7 @@ class SemanticsModulatedAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.proj_out = StylizationBlock(latent_dim, time_embed_dim, dropout)
     
-    def forward(self, x, xf, emb, src_mask, cond_type, re_dict=None):
+    def forward(self, x, xf, emb, src_mask, cond_type, re_dict=None, **kwargs):
         """
         x: B, T, D
         xf: B, N, L

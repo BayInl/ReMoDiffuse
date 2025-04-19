@@ -96,6 +96,26 @@ class DecoderLayer(nn.Module):
             x = self.ffn(**kwargs)
         return x
 
+class SparseDecoderLayer(nn.Module):
+    def __init__(self,
+                 sparse_block_cfg=None,
+                 ca_block_cfg=None,
+                 ffn_cfg=None):
+        super().__init__()
+        self.sa_block = build_attention(sparse_block_cfg)
+        self.ca_block = build_attention(ca_block_cfg)
+        self.ffn = FFN(**ffn_cfg)
+
+    def forward(self, **kwargs):
+        if self.sa_block is not None:
+            x = self.sa_block(**kwargs)
+            kwargs.update({'x': x})
+        if self.ca_block is not None:
+            x = self.ca_block(**kwargs)
+            kwargs.update({'x': x})
+        if self.ffn is not None:
+            x = self.ffn(**kwargs)
+        return x
 
 class DiffusionTransformer(BaseModule, metaclass=ABCMeta):
     def __init__(self,
@@ -105,6 +125,7 @@ class DiffusionTransformer(BaseModule, metaclass=ABCMeta):
                  time_embed_dim=2048,
                  num_layers=8,
                  sa_block_cfg=None,
+                 sparse_sa_cfg=None,
                  ca_block_cfg=None,
                  ffn_cfg=None,
                  text_encoder=None,
@@ -134,6 +155,7 @@ class DiffusionTransformer(BaseModule, metaclass=ABCMeta):
             nn.Linear(self.time_embed_dim // 4, self.time_embed_dim),
         )
         self.build_temporal_blocks(sa_block_cfg, ca_block_cfg, ffn_cfg)
+        self.build_temporal_sparse_blocks(sparse_sa_cfg, ca_block_cfg, ffn_cfg)
         
         # Output Module
         self.out = zero_module(nn.Linear(self.latent_dim, self.input_feats))
@@ -144,6 +166,17 @@ class DiffusionTransformer(BaseModule, metaclass=ABCMeta):
             self.temporal_decoder_blocks.append(
                 DecoderLayer(
                     sa_block_cfg=sa_block_cfg,
+                    ca_block_cfg=ca_block_cfg,
+                    ffn_cfg=ffn_cfg
+                )
+            )
+
+    def build_temporal_sparse_blocks(self, sparse_block_cfg, ca_block_cfg, ffn_cfg):
+        self.temporal_sparse_blocks = nn.ModuleList()
+        for i in range(self.num_layers):
+            self.temporal_sparse_blocks.append(
+                SparseDecoderLayer(
+                    sparse_block_cfg=sparse_block_cfg,
                     ca_block_cfg=ca_block_cfg,
                     ffn_cfg=ffn_cfg
                 )
@@ -228,6 +261,34 @@ class DiffusionTransformer(BaseModule, metaclass=ABCMeta):
     def forward_test(self, h, src_mask, emb, **kwargs):
         pass
 
+    def create_keyframe_mask(self, device, src_mask):
+        """Create a binary mask for keyframes (1 for keyframes, 0 for non-keyframes)
+        Args:
+            device: device to create tensors on
+            src_mask: [B, T, 1] binary mask where 1 indicates actual motion length
+        Returns:
+            keyframe_mask: [B, T] binary mask where 1 indicates keyframes
+        """
+        B, T = src_mask.shape[0], src_mask.shape[1]
+
+        # Create base mask with every fourth position as True
+        base_mask = torch.zeros((B, T), dtype=torch.bool, device=device)
+        base_mask[:, ::2] = True
+
+        # Create mask for first and last positions
+        first_last_mask = torch.zeros((B, T), dtype=torch.bool, device=device)
+        # [B], convert to long type
+        actual_lengths = src_mask.squeeze(-1).sum(dim=1).long()
+        first_last_mask[torch.arange(B), 0] = True  # First position
+        first_last_mask[torch.arange(
+            B), actual_lengths-1] = True  # Last position
+
+        # Combine masks and apply actual length constraint
+        keyframe_mask = base_mask | first_last_mask
+        keyframe_mask = keyframe_mask & src_mask.squeeze(-1).bool()
+
+        return keyframe_mask  # [B, T]
+
     def forward(self, motion, timesteps, motion_mask=None, **kwargs):
         """
         motion: B, T, D
@@ -243,11 +304,30 @@ class DiffusionTransformer(BaseModule, metaclass=ABCMeta):
             emb = self.time_embed(timestep_embedding(timesteps, self.latent_dim)) + conditions['xf_proj']
         else:
             emb = self.time_embed(timestep_embedding(timesteps, self.latent_dim))
+
+        # Create keyframe mask
+        keyframe_mask = self.create_keyframe_mask(motion.device, src_mask)
         # B, T, latent_dim
         h = self.joint_embed(motion)
         h = h + self.sequence_embedding.unsqueeze(0)[:, :T, :]
 
         if self.training:
-            return self.forward_train(h=h, src_mask=src_mask, emb=emb, timesteps=timesteps, **conditions)
+            output = self.forward_train(
+                h=h,
+                src_mask=src_mask,
+                keyframe_mask=keyframe_mask,
+                emb=emb,
+                timesteps=timesteps,
+                **conditions
+            )
         else:
-            return self.forward_test(h=h, src_mask=src_mask, emb=emb, timesteps=timesteps, **conditions)
+            output = self.forward_test(
+                h=h,
+                src_mask=src_mask,
+                keyframe_mask=keyframe_mask,
+                emb=emb,
+                timesteps=timesteps,
+                **conditions
+            )
+
+        return output

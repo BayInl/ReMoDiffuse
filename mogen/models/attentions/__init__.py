@@ -4,3 +4,4 @@ from .efficient_attention import (
 )
 from .semantics_modulated import SemanticsModulatedAttention
 from .base_attention import BaseMixedAttention
+from .sparse_attention import SparseSelfAttention

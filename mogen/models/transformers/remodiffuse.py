@@ -317,16 +317,18 @@ class ReMoDiffuseTransformer(DiffusionTransformer):
     def post_process(self, motion):
         return motion
 
-    def forward_train(self, h=None, src_mask=None, emb=None, xf_out=None, re_dict=None, **kwargs):
+    def forward_train(self, h=None, src_mask=None, emb=None, xf_out=None, re_dict=None, keyframe_mask=None, **kwargs):
         B, T = h.shape[0], h.shape[1]
         cond_type = torch.randint(0, 100, size=(B, 1, 1)).to(h.device)
-        for module in self.temporal_decoder_blocks:
-            h = module(x=h, xf=xf_out, emb=emb, src_mask=src_mask, cond_type=cond_type, re_dict=re_dict)
+        for module in self.temporal_sparse_blocks:
+            h = module(x=h, xf=xf_out, emb=emb, src_mask=src_mask,
+                       keyframe_mask=keyframe_mask, cond_type=cond_type, re_dict=re_dict)
 
         output = self.out(h).view(B, T, -1).contiguous()
         return output
     
-    def forward_test(self, h=None, src_mask=None, emb=None, xf_out=None, re_dict=None, timesteps=None, **kwargs):
+
+    def forward_test(self, h=None, src_mask=None, emb=None, xf_out=None, re_dict=None, timesteps=None, keyframe_mask=None, **kwargs):
         B, T = h.shape[0], h.shape[1]
         both_cond_type = torch.zeros(B, 1, 1).to(h.device) + 99
         text_cond_type = torch.zeros(B, 1, 1).to(h.device) + 1
@@ -340,12 +342,14 @@ class ReMoDiffuseTransformer(DiffusionTransformer):
         xf_out = xf_out.repeat(4, 1, 1)
         emb = emb.repeat(4, 1)
         src_mask = src_mask.repeat(4, 1, 1)
+        keyframe_mask = keyframe_mask.repeat(4, 1)
         if re_dict['re_motion'].shape[0] != h.shape[0]:
             re_dict['re_motion'] = re_dict['re_motion'].repeat(4, 1, 1, 1)
             re_dict['re_text'] = re_dict['re_text'].repeat(4, 1, 1, 1)
             re_dict['re_mask'] = re_dict['re_mask'].repeat(4, 1, 1)
-        for module in self.temporal_decoder_blocks:
-            h = module(x=h, xf=xf_out, emb=emb, src_mask=src_mask, cond_type=all_cond_type, re_dict=re_dict)
+        for module in self.temporal_sparse_blocks:
+            h = module(x=h, xf=xf_out, emb=emb, src_mask=src_mask,
+                       keyframe_mask=keyframe_mask, cond_type=all_cond_type, re_dict=re_dict)
         out = self.out(h).view(4 * B, T, -1).contiguous()
         out_both = out[:B].contiguous()
         out_text = out[B: 2 * B].contiguous()
