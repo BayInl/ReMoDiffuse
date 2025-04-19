@@ -88,7 +88,8 @@ If you find our work useful for your research, please consider citing the paper:
 
 ```shell
 # Create Conda Environment
-conda create -n mogen python=3.9 -y
+conda config --add channels nvidia
+conda create -n mogen python=3.10 -y
 conda activate mogen
 
 # C++ Environment
@@ -101,8 +102,14 @@ conda install mamba -n base -c conda-forge
 # Install scikit-learn
 mamba install scikit-learn -y
 
+export MAMBA_NO_LOW_SPEED_LIMIT=1 && export MAMBA_SOLVER_NO_LOW_SPEED_LIMIT=1
+
+ ulimit -v unlimited
+ ulimit -m unlimited
+
 # Install Pytorch
-mamba install pytorch=1.12.1 torchvision=0.13.1 torchaudio=0.12.1 cudatoolkit=11.3 diffusers -c pytorch -c conda-forge -y
+mamba install pytorch=1.12.1 torchvision=0.13.1 torchaudio=0.12.1 cudatoolkit=11.3 numpy=1.21.0 scipy diffusers transformers -c pytorch -c conda-forge -y
+# mamba install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.8 numpy=1.21.0 diffusers transformers -c pytorch -c nvidia
 
 # Install MMCV
 # source /etc/network_turbo
@@ -117,8 +124,20 @@ mamba install pytorch3d -c pytorch3d -y
 # Install other requirements
 # source /etc/network_turbo
 pip install -r requirements.txt
-pip install 'numpy<2'
+
+python -c "from transformers import pipeline; print(pipeline('sentiment-analysis')('we love you'))"
 # unset http_proxy && unset https_proxy
+```
+
+Note: If you use pytorch in 1.12.1, you need to install xformers manually.
+```shell
+cd ..
+git clone --branch v0.0.16 https://github.com/facebookresearch/xformers.git
+cd xformers
+git submodule update --init --recursive
+pip install -r requirements.txt
+pip install -e .
+cd ReMoDiffuse
 ```
 
 ## Data Preparation

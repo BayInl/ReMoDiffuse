@@ -230,9 +230,9 @@ class RetrievalDatabase(nn.Module):
         re_motion = self.motion_proj(all_motions) + self.motion_pos_embedding.unsqueeze(0)
         for module in self.motion_encoder_blocks:
             re_motion = module(x=re_motion, src_mask=src_mask.unsqueeze(-1))
-        re_motion = re_motion.view(B, self.num_retrieval, T, -1).contiguous()
+        re_motion = re_motion.view(B, self.num_retrieval, T, -1).contiguous()# [B, N, 196, 512]
         # stride
-        re_motion = re_motion[:, :, ::self.stride, :].contiguous()
+        re_motion = re_motion[:, :, ::self.stride, :].contiguous()# [B, N, 49, 512]
         
         src_mask = src_mask[:, ::self.stride].contiguous()
         src_mask = src_mask.view(B, self.num_retrieval, -1).contiguous()
